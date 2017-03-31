@@ -12,23 +12,51 @@ using std::vector;
  * Initializes Unscented Kalman filter
  */
 UKF::UKF() {
+  
   // if this is false, laser measurements will be ignored (except during init)
   use_laser_ = true;
-
   // if this is false, radar measurements will be ignored (except during init)
   use_radar_ = true;
-
-  // initial state vector
-  x_ = VectorXd(5);
-
-  // initial covariance matrix
-  P_ = MatrixXd(5, 5);
 
   // Process noise standard deviation longitudinal acceleration in m/s^2
   std_a_ = 30;
 
   // Process noise standard deviation yaw acceleration in rad/s^2
   std_yawdd_ = 30;
+
+  n_x_ = 5;
+  n_aug_ = 7;
+  lambda_ = 3 - n_aug_;
+
+  // initial state vector
+  x_ = VectorXd(n_x_);
+  x_ << 1,1,1,1,1;
+
+  // initial covariance matrix
+  P_ = MatrixXd(n_x_, n_x_);
+  P_ <<   1, 0, 0, 0, 0,
+          0, 1, 0, 0, 0,
+          0, 0, 1, 0, 0,
+          0, 0, 0, 1, 0,
+          0, 0, 0 ,0, 1;
+
+  //create augmented mean and covariance
+  VectorXd x_aug_ = VectorXd(7);
+  MatrixXd P_aug_ = MatrixXd(7, 7);
+
+  x_aug_.head(5) = x_;
+  x_aug_(5) = 0;
+  x_aug_(6) = 0;
+
+  P_aug_.fill(0.0);
+  P_aug_.topLeftCorner(5,5) = P_;
+  P_aug_(5,5) = std_a_*std_a_;
+  P_aug_(6,6) = std_yawdd_*std_yawdd_;
+
+  //create sigma point matrix
+  MatrixXd Xsig_ = MatrixXd(n_aug_, 2 * n_aug_ + 1);
+
+
 
   // Laser measurement noise standard deviation position1 in m
   std_laspx_ = 0.15;
@@ -47,10 +75,18 @@ UKF::UKF() {
 
   /**
   TODO:
-
   Complete the initialization. See ukf.h for other member properties.
+  - Number of sigma points needs to be based on augmented number
+  - Transition matrix F
+  - Obs model - laser H_laser_
+  - Obs model - radar H_radar_
+  - Predicted covariance matrices for laser and radar R_laser and R_radar
+  - Augmented x and P
+  - predicted sigma points matrix
+  - weights of sigma points
 
-  Hint: one or more values initialized above might be wildly off...
+  TODO:
+  One or more values initialized above might be wildly off...
   */
 }
 
@@ -66,7 +102,11 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
 
   Complete this function! Make sure you switch between lidar and radar
   measurements.
+
+  Determine detla_t and predict
+  Update with either lidar or radar
   */
+
 }
 
 /**
@@ -81,6 +121,27 @@ void UKF::Prediction(double delta_t) {
   Complete this function! Estimate the object's location. Modify the state
   vector, x_. Predict sigma points, the state, and the state covariance matrix.
   */
+
+  //calculate square root of P
+  MatrixXd A_ = P_aug_.llt().matrixL();
+
+  //create augmented sigma points
+  Xsig_aug_.col(0)  = x_aug_;
+  for (int i = 0; i< n_aug_; i++)
+  {
+    Xsig_aug_.col(i+1)       = x_aug_ + sqrt(lambda_+n_aug_) * A_.col(i);
+    Xsig_aug_.col(i+1+n_aug_) = x_aug_ - sqrt(lambda_+n_aug_) * A_.col(i);
+  }
+
+  /*
+  TODO:
+
+  generate sigma points using augmented inputs
+  predict sigma points
+    process through f and noise v, which includes longitudinal and yaw accelerations
+  predict mean and covariance
+  */
+
 }
 
 /**
