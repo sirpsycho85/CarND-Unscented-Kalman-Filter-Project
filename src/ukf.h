@@ -35,7 +35,6 @@ public:
   MatrixXd A_;
 
   ///* predicted sigma points matrix
-  MatrixXd Xsig_;
   MatrixXd Xsig_aug_;
   MatrixXd Xsig_pred_;
 

@@ -12,7 +12,7 @@ using std::vector;
  * Initializes Unscented Kalman filter
  */
 UKF::UKF() {
-  
+
   // if this is false, laser measurements will be ignored (except during init)
   use_laser_ = true;
   // if this is false, radar measurements will be ignored (except during init)
@@ -41,8 +41,8 @@ UKF::UKF() {
           0, 0, 0 ,0, 1;
 
   //create augmented mean and covariance
-  VectorXd x_aug_ = VectorXd(7);
-  MatrixXd P_aug_ = MatrixXd(7, 7);
+  x_aug_ = VectorXd(7);
+  P_aug_ = MatrixXd(7, 7);
 
   x_aug_.head(5) = x_;
   x_aug_(5) = 0;
@@ -53,8 +53,9 @@ UKF::UKF() {
   P_aug_(5,5) = std_a_*std_a_;
   P_aug_(6,6) = std_yawdd_*std_yawdd_;
 
-  //create sigma point matrix
-  MatrixXd Xsig_ = MatrixXd(n_aug_, 2 * n_aug_ + 1);
+  //create sigma point matrices
+  Xsig_aug_ = MatrixXd(n_aug_, 2 * n_aug_ + 1);
+  Xsig_pred_ = MatrixXd(n_x_, 2 * n_aug_ + 1);
 
 
 
@@ -106,6 +107,8 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
   Determine detla_t and predict
   Update with either lidar or radar
   */
+  double delta_t = 0.001; // placeholder
+  UKF::Prediction(delta_t);
 
 }
 
@@ -122,24 +125,70 @@ void UKF::Prediction(double delta_t) {
   vector, x_. Predict sigma points, the state, and the state covariance matrix.
   */
 
-  //calculate square root of P
   MatrixXd A_ = P_aug_.llt().matrixL();
 
-  //create augmented sigma points
+  //generate sigma points
+  
   Xsig_aug_.col(0)  = x_aug_;
+
   for (int i = 0; i< n_aug_; i++)
   {
-    Xsig_aug_.col(i+1)       = x_aug_ + sqrt(lambda_+n_aug_) * A_.col(i);
+    Xsig_aug_.col(i+1)        = x_aug_ + sqrt(lambda_+n_aug_) * A_.col(i);
     Xsig_aug_.col(i+1+n_aug_) = x_aug_ - sqrt(lambda_+n_aug_) * A_.col(i);
+  }
+  //predict sigma points
+  for (int i = 0; i< 2*n_aug_+1; i++)
+  {
+    //extract values for better readability
+    double p_x = Xsig_aug_(0,i);
+    double p_y = Xsig_aug_(1,i);
+    double v = Xsig_aug_(2,i);
+    double yaw = Xsig_aug_(3,i);
+    double yawd = Xsig_aug_(4,i);
+    double nu_a = Xsig_aug_(5,i);
+    double nu_yawdd = Xsig_aug_(6,i);
+
+    //predicted state values
+    double px_p, py_p;
+
+    //avoid division by zero
+    if (fabs(yawd) > 0.001) {
+        px_p = p_x + v/yawd * ( sin (yaw + yawd*delta_t) - sin(yaw));
+        py_p = p_y + v/yawd * ( cos(yaw) - cos(yaw+yawd*delta_t) );
+    }
+    else {
+        px_p = p_x + v*delta_t*cos(yaw);
+        py_p = p_y + v*delta_t*sin(yaw);
+    }
+
+    double v_p = v;
+    double yaw_p = yaw + yawd*delta_t;
+    double yawd_p = yawd;
+
+    //add noise
+    px_p = px_p + 0.5*nu_a*delta_t*delta_t * cos(yaw);
+    py_p = py_p + 0.5*nu_a*delta_t*delta_t * sin(yaw);
+    v_p = v_p + nu_a*delta_t;
+
+    yaw_p = yaw_p + 0.5*nu_yawdd*delta_t*delta_t;
+    yawd_p = yawd_p + nu_yawdd*delta_t;
+
+    //write predicted sigma point into right column
+    Xsig_pred_(0,i) = px_p;
+    Xsig_pred_(1,i) = py_p;
+    Xsig_pred_(2,i) = v_p;
+    Xsig_pred_(3,i) = yaw_p;
+    Xsig_pred_(4,i) = yawd_p;
   }
 
   /*
   TODO:
-
-  generate sigma points using augmented inputs
   predict sigma points
     process through f and noise v, which includes longitudinal and yaw accelerations
   predict mean and covariance
+
+  QUESTION:
+  does the augmentation happen here, because each time it's based on new X?
   */
 
 }
