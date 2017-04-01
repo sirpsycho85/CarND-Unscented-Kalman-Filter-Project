@@ -12,6 +12,9 @@ using Eigen::MatrixXd;
 using Eigen::VectorXd;
 
 class UKF {
+
+// TODO some private
+
 public:
 
   ///* initially set to false, set to true in first call of ProcessMeasurement
@@ -31,7 +34,8 @@ public:
   MatrixXd P_;
   MatrixXd P_aug_;
 
-  
+  long previous_timestamp_;
+
   MatrixXd A_;
 
   ///* predicted sigma points matrix
@@ -89,6 +93,11 @@ public:
    * Destructor
    */
   virtual ~UKF();
+  
+  void InitializeFirstMeasurement(MeasurementPackage measurement_pack);
+  void GenerateSigmaPoints();
+  void PredictSigmaPoints(double dt);
+  void PredictMeanCovariance();
 
   /**
    * ProcessMeasurement
@@ -99,9 +108,9 @@ public:
   /**
    * Prediction Predicts sigma points, the state, and the state covariance
    * matrix
-   * @param delta_t Time between k and k+1 in s
+   * @param dt Time between k and k+1 in s
    */
-  void Prediction(double delta_t);
+  void Prediction(double dt);
 
   /**
    * Updates the state and the state covariance matrix using a laser measurement
