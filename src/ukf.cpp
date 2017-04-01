@@ -8,9 +8,8 @@ using Eigen::MatrixXd;
 using Eigen::VectorXd;
 using std::vector;
 
-/**
- * Initializes Unscented Kalman filter
- */
+//TODO: comments to note what inputs each function uses
+
 UKF::UKF() {
 
   is_initialized_ = false;
@@ -105,15 +104,6 @@ UKF::~UKF() {}
  * either radar or laser.
  */
 void UKF::ProcessMeasurement(MeasurementPackage measurement_pack) {
-  /**
-  TODO:
-
-  Complete this function! Make sure you switch between lidar and radar
-  measurements.
-
-  Determine detla_t and predict
-  Update with either lidar or radar
-  */
 
   if(!is_initialized_) {
     InitializeFirstMeasurement(measurement_pack);
@@ -122,11 +112,17 @@ void UKF::ProcessMeasurement(MeasurementPackage measurement_pack) {
   double dt;
   dt = (measurement_pack.timestamp_ - previous_timestamp_) / 1000000.0;
   previous_timestamp_ = measurement_pack.timestamp_;
+  
   UKF::Prediction(dt);
+  
   if(measurement_pack.sensor_type_ == MeasurementPackage::RADAR) {
     UpdateRadar(measurement_pack);
   }
+  else if (measurement_pack.sensor_type_ == MeasurementPackage::LASER) {
+    UpdateLidar(measurement_pack);
+  }
 }
+
 
 void UKF::InitializeFirstMeasurement(MeasurementPackage measurement_pack) {
   cout << "initialization" << endl;
@@ -165,26 +161,14 @@ void UKF::InitializeFirstMeasurement(MeasurementPackage measurement_pack) {
   //TODO: not clear when I need to update x_ vs x_aug_
 }
 
-/**
- * Predicts sigma points, the state, and the state covariance matrix.
- * @param {double} dt the change in time (in seconds) between the last
- * measurement and this one.
- */
+
 void UKF::Prediction(double dt) {
-  /**
-  TODO:
-
-  Complete this function! Estimate the object's location. Modify the state
-  vector, x_. Predict sigma points, the state, and the state covariance matrix.
-  */
-
   GenerateSigmaPoints();
   PredictSigmaPoints(dt);
   PredictMeanCovariance();
-
-  // TODO: figure out where X and X aug get updated.
-
 }
+
+
 void UKF::GenerateSigmaPoints() {
   A_ = P_aug_.llt().matrixL();
   
@@ -195,6 +179,7 @@ void UKF::GenerateSigmaPoints() {
     Xsig_aug_.col(i+1+n_aug_) = x_aug_ - sqrt(lambda_+n_aug_) * A_.col(i);
   }
 }
+
 
 void UKF::PredictSigmaPoints(double dt) {
   for (int i = 0; i< 2*n_aug_+1; i++) {
@@ -241,6 +226,7 @@ void UKF::PredictSigmaPoints(double dt) {
   }
 }
 
+
 void UKF::PredictMeanCovariance() {
   //weights
   VectorXd weights = VectorXd(2*n_aug_+1);
@@ -282,10 +268,7 @@ void UKF::PredictMeanCovariance() {
   P_aug_.topLeftCorner(5,5) = P_;
 }
 
-/**
- * Updates the state and the state covariance matrix using a laser measurement.
- * @param {MeasurementPackage} measurement_pack
- */
+
 void UKF::UpdateLidar(MeasurementPackage measurement_pack) {
   /**
   TODO:
@@ -297,10 +280,6 @@ void UKF::UpdateLidar(MeasurementPackage measurement_pack) {
   */
 }
 
-/**
- * Updates the state and the state covariance matrix using a radar measurement.
- * @param {MeasurementPackage} measurement_pack
- */
 void UKF::UpdateRadar(MeasurementPackage measurement_pack) {
   /**
   TODO:
@@ -309,6 +288,14 @@ void UKF::UpdateRadar(MeasurementPackage measurement_pack) {
   position. Modify the state vector, x_, and covariance, P_.
 
   You'll also need to calculate the radar NIS.
+
+  First, transform predicted state into measurement space...
+  ...to get the predicted measurement: z=h(x)+w
+      but can use 0 for w, w is accounted for later
+    reuse the predicted sigma points and produce measurement sigma points
+      don't have to use augmented b/c measurement noise is additive
+    calculate z and S (covariance of predicted measurement)
+      in calculation of S, you account for w
   */
 }
 
