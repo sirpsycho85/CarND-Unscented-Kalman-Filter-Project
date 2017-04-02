@@ -36,6 +36,8 @@ public:
 
   long previous_timestamp_;
 
+  //
+
   MatrixXd A_;
 
   ///* predicted sigma points matrix
@@ -75,6 +77,9 @@ public:
   ///* Augmented state dimension
   int n_aug_;
 
+  int n_z_radar_;
+  int n_z_lidar_;
+
   ///* Sigma point spreading parameter
   double lambda_;
 
@@ -98,6 +103,7 @@ public:
   void GenerateSigmaPoints();
   void PredictSigmaPoints(double dt);
   void PredictMeanCovariance();
+  void PredictRadarMeasurement();
 
   /**
    * ProcessMeasurement
