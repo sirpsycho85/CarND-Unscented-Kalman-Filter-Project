@@ -91,6 +91,10 @@ public:
   ///* the current NIS for laser
   double NIS_laser_;
 
+  double NIS_radar_count_;
+  double NIS_radar_sum_;
+  double NIS_radar_mean_;
+
   /**
    * Constructor
    */

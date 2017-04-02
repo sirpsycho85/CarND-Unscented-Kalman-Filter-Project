@@ -16,16 +16,19 @@ UKF::UKF() {
   is_initialized_ = false;
   previous_timestamp_ = 0;
 
+  NIS_radar_count_ = 0;
+  NIS_radar_sum_ = 0;
+
   // if this is false, laser measurements will be ignored (except during init)
   use_laser_ = true;
   // if this is false, radar measurements will be ignored (except during init)
   use_radar_ = true;
 
   // Process noise standard deviation longitudinal acceleration in m/s^2
-  std_a_ = 3;
+  std_a_ = 1;
 
   // Process noise standard deviation yaw acceleration in rad/s^2
-  std_yawdd_ = 2*M_PI*0.3;
+  std_yawdd_ = 0.05;
 
   //TODO: when process noise sd are both 0.1 it's slow
 
@@ -116,10 +119,7 @@ UKF::UKF() {
 
 UKF::~UKF() {}
 
-/**
- * @param {MeasurementPackage} measurement_pack The latest measurement data of
- * either radar or laser.
- */
+
 void UKF::ProcessMeasurement(MeasurementPackage measurement_pack) {
   if(!is_initialized_) {
     InitializeFirstMeasurement(measurement_pack);
@@ -295,6 +295,7 @@ void UKF::UpdateRadar(MeasurementPackage measurement_pack) {
   //MEASUREMENT PREDICTION
   int n_z = n_z_radar_;
   //transform sigma points into measurement space
+  //cout << "Xsig_pred_:\n" << Xsig_pred_ << endl;
   MatrixXd Zsig = MatrixXd(n_z, 2 * n_aug_ + 1);
   for (int i = 0; i < 2 * n_aug_ + 1; i++) {
 
@@ -311,6 +312,7 @@ void UKF::UpdateRadar(MeasurementPackage measurement_pack) {
     Zsig(1,i) = atan2(p_y,p_x);                                 //phi
     Zsig(2,i) = (p_x*v1 + p_y*v2 ) / sqrt(p_x*p_x + p_y*p_y);   //r_dot
   }
+  //cout << "Zsig:\n" << Zsig << endl;
 
   //TO DO: refactor this next part out?
 
@@ -381,12 +383,17 @@ void UKF::UpdateRadar(MeasurementPackage measurement_pack) {
   x_aug_.head(5) = x_;
   P_aug_.topLeftCorner(5,5) = P_;
 
-  cout << "x_aug_: " << x_aug_ << endl;
-  cout << "P_aug_: " << P_aug_ << endl;
+  //cout << "x_aug_:\n" << x_aug_ << endl;
+  //cout << "P_aug_:\n" << P_aug_ << endl;
 
   /**
   TODO: Calculate the radar NIS to check consistency.
   */
   NIS_radar_ = (z - z_pred).transpose() * S.inverse() * (z - z_pred);
-  cout << "NIS_radar_: " << NIS_radar_ << endl;
+  //cout << "NIS_radar_: " << NIS_radar_ << endl;
+  NIS_radar_count_ += 1;
+  NIS_radar_sum_ += NIS_radar_;
+  NIS_radar_mean_ = NIS_radar_sum_ / NIS_radar_count_;
+  //cout << "NIS_radar_mean_: " << NIS_radar_mean_ << endl;
+
 }
