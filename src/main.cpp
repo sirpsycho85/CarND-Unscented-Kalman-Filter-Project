@@ -155,6 +155,7 @@ int main(int argc, char* argv[]) {
   out_file_ << "vy_true" << "\t";
   out_file_ << "NIS" << "\n";
 
+//number_of_measurements = 10;
 
   for (size_t k = 0; k < number_of_measurements; ++k) {
     cout << "processing measurement: " << k+1 << endl;

@@ -9,6 +9,7 @@ using Eigen::VectorXd;
 using std::vector;
 
 //TODO: comments to note what inputs each function uses
+//TODO: handle zeros in the data
 
 UKF::UKF() {
 
@@ -337,6 +338,7 @@ void UKF::UpdateRadar(MeasurementPackage measurement_pack) {
   //MEASUREMENT UPDATE
 
   VectorXd z = measurement_pack.raw_measurements_;
+  cout << "z = " << z << endl;
 
   //create matrix for cross correlation Tc
   MatrixXd Tc = MatrixXd(n_x_, n_z);
