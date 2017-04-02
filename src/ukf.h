@@ -36,8 +36,6 @@ public:
 
   long previous_timestamp_;
 
-  //
-
   MatrixXd A_;
 
   ///* predicted sigma points matrix
@@ -69,6 +67,7 @@ public:
   double std_radrd_ ;
 
   MatrixXd R_radar_;
+  MatrixXd R_lidar_;
 
   ///* Weights of sigma points
   VectorXd weights_;
@@ -135,6 +134,7 @@ public:
    * @param meas_package The measurement at k+1
    */
   void UpdateRadar(MeasurementPackage meas_package);
+  void UpdateCommon(int n_z, MatrixXd R, MatrixXd Zsig, MeasurementPackage measurement_pack);
 };
 
 #endif /* UKF_H */

@@ -228,7 +228,6 @@ int main(int argc, char* argv[]) {
   if (in_file_.is_open()) {
     in_file_.close();
   }
-
-  cout << "Done!" << endl;
+  
   return 0;
 }

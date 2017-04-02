@@ -10,6 +10,9 @@ using std::vector;
 
 //TODO: comments to note what inputs each function uses
 //TODO: handle zeros in the data
+//TODO: check constructor, see if everything from .h used
+//TODO: NIS should I just output? Add lidar NIS?
+//TODO: clean up .h
 
 UKF::UKF() {
 
@@ -29,8 +32,6 @@ UKF::UKF() {
 
   // Process noise standard deviation yaw acceleration in rad/s^2
   std_yawdd_ = 0.05;
-
-  //TODO: when process noise sd are both 0.1 it's slow
 
   n_x_ = 5;
   n_aug_ = 7;
@@ -86,6 +87,10 @@ UKF::UKF() {
   // Laser measurement noise standard deviation position2 in m
   std_laspy_ = 0.15;
 
+  R_lidar_ = MatrixXd(n_z_lidar_,n_z_lidar_);
+  R_lidar_ << std_laspx_*std_laspx_, 0,
+              0, std_laspy_*std_laspy_;
+
   // Radar measurement noise standard deviation radius in m
   std_radr_ = 0.3;
 
@@ -99,23 +104,8 @@ UKF::UKF() {
   R_radar_ << std_radr_*std_radr_, 0, 0,
               0, std_radphi_*std_radphi_, 0,
               0, 0,std_radrd_*std_radrd_;
-
-  /**
-  TODO:
-  Complete the initialization. See ukf.h for other member properties.
-  - Number of sigma points needs to be based on augmented number
-  - Transition matrix F
-  - Obs model - laser H_laser_
-  - Obs model - radar H_radar_
-  - Predicted covariance matrices for laser and radar R_laser and R_radar
-  - Augmented x and P
-  - predicted sigma points matrix
-  - weights of sigma points
-
-  TODO:
-  One or more values initialized above might be wildly off...
-  */
 }
+
 
 UKF::~UKF() {}
 
@@ -144,7 +134,6 @@ void UKF::InitializeFirstMeasurement(MeasurementPackage measurement_pack) {
   previous_timestamp_ = measurement_pack.timestamp_;
   if(measurement_pack.sensor_type_ == MeasurementPackage::RADAR) {
     //convert radar to CTRV to set first state
-    cout << "INITIALIZE RADAR" << endl;
     float ro;
     float theta;
     float ro_dot;
@@ -168,7 +157,6 @@ void UKF::InitializeFirstMeasurement(MeasurementPackage measurement_pack) {
     x_ << px, py, v, psi, psi_dot;
   }
   else if (measurement_pack.sensor_type_ == MeasurementPackage::LASER) {
-    cout << "INITIALIZE LASER" << endl;
     x_ << measurement_pack.raw_measurements_[0], measurement_pack.raw_measurements_[1], 0, 0, 0;
   }
   x_aug_.head(5) = x_;
@@ -280,22 +268,25 @@ void UKF::PredictMeanCovariance() {
 
 
 void UKF::UpdateLidar(MeasurementPackage measurement_pack) {
-  /**
-  TODO:
+  //MEASUREMENT PREDICTION
+  int n_z = n_z_lidar_;
+  MatrixXd R = R_lidar_;
+  //transform sigma points into measurement space
+  MatrixXd Zsig = MatrixXd(n_z, 2 * n_aug_ + 1);
+  for (int i = 0; i < 2 * n_aug_ + 1; i++) {
+    Zsig(0,i) = Xsig_pred_(0,i);  //px
+    Zsig(1,i) = Xsig_pred_(1,i);  //py
+  }
 
-  Complete this function! Use lidar data to update the belief about the object's
-  position. Modify the state vector, x_, and covariance, P_.
-
-  You'll also need to calculate the lidar NIS.
-  */
+  UpdateCommon(n_z, R, Zsig, measurement_pack);
 }
 
 void UKF::UpdateRadar(MeasurementPackage measurement_pack) {
 
   //MEASUREMENT PREDICTION
   int n_z = n_z_radar_;
+  MatrixXd R = R_radar_;
   //transform sigma points into measurement space
-  //cout << "Xsig_pred_:\n" << Xsig_pred_ << endl;
   MatrixXd Zsig = MatrixXd(n_z, 2 * n_aug_ + 1);
   for (int i = 0; i < 2 * n_aug_ + 1; i++) {
 
@@ -312,10 +303,13 @@ void UKF::UpdateRadar(MeasurementPackage measurement_pack) {
     Zsig(1,i) = atan2(p_y,p_x);                                 //phi
     Zsig(2,i) = (p_x*v1 + p_y*v2 ) / sqrt(p_x*p_x + p_y*p_y);   //r_dot
   }
-  //cout << "Zsig:\n" << Zsig << endl;
 
-  //TO DO: refactor this next part out?
+  UpdateCommon(n_z, R, Zsig, measurement_pack);
+  //TODO: need to return z, z_pred, and S from UpdateCommon
+  //NIS_radar_ = (z - z_pred).transpose() * S.inverse() * (z - z_pred);
+}
 
+void UKF::UpdateCommon(int n_z, MatrixXd R, MatrixXd Zsig, MeasurementPackage measurement_pack) {
   //mean predicted measurement
   VectorXd z_pred = VectorXd(n_z);
   z_pred.fill(0.0);
@@ -338,7 +332,7 @@ void UKF::UpdateRadar(MeasurementPackage measurement_pack) {
   }
 
   //add measurement noise covariance matrix
-  S = S + R_radar_;
+  S = S + R;
 
   //MEASUREMENT UPDATE
 
@@ -382,18 +376,4 @@ void UKF::UpdateRadar(MeasurementPackage measurement_pack) {
   //TODO: is this necessary?
   x_aug_.head(5) = x_;
   P_aug_.topLeftCorner(5,5) = P_;
-
-  //cout << "x_aug_:\n" << x_aug_ << endl;
-  //cout << "P_aug_:\n" << P_aug_ << endl;
-
-  /**
-  TODO: Calculate the radar NIS to check consistency.
-  */
-  NIS_radar_ = (z - z_pred).transpose() * S.inverse() * (z - z_pred);
-  //cout << "NIS_radar_: " << NIS_radar_ << endl;
-  NIS_radar_count_ += 1;
-  NIS_radar_sum_ += NIS_radar_;
-  NIS_radar_mean_ = NIS_radar_sum_ / NIS_radar_count_;
-  //cout << "NIS_radar_mean_: " << NIS_radar_mean_ << endl;
-
 }
