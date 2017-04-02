@@ -15,54 +15,49 @@ class UKF {
 
 public:
 
-  ///* initially set to false, set to true in first call of ProcessMeasurement
   bool is_initialized_;
+  long previous_timestamp_;
 
-  ///* state vector: [pos1 pos2 vel_abs yaw_angle yaw_rate] in SI units and rad
+  // state vector [pos1 pos2 vel_abs yaw_angle yaw_rate] in SI units and rad
   VectorXd x_;
   VectorXd x_aug_;
 
-  ///* state covariance matrix
+  // state covariance matrix
   MatrixXd P_;
   MatrixXd P_aug_;
 
-  long previous_timestamp_;
-
+  // square root of P_aug_
   MatrixXd A_;
 
-  ///* predicted sigma points matrix
+  // sigma points matrices and weights
   MatrixXd Xsig_aug_;
   MatrixXd Xsig_pred_;
+  VectorXd weights_;
 
-  ///* time when the state is true, in us
-  long long time_us_;
-
-  ///* Process noise standard deviation longitudinal acceleration in m/s^2
+  // Process noise standard deviation longitudinal acceleration in m/s^2
   double std_a_;
 
-  ///* Process noise standard deviation yaw acceleration in rad/s^2
+  // Process noise standard deviation yaw acceleration in rad/s^2
   double std_yawdd_;
 
-  ///* Laser measurement noise standard deviation position1 in m
+  // Laser measurement noise standard deviation position1 in m
   double std_laspx_;
 
-  ///* Laser measurement noise standard deviation position2 in m
+  // Laser measurement noise standard deviation position2 in m
   double std_laspy_;
 
-  ///* Radar measurement noise standard deviation radius in m
+  // Radar measurement noise standard deviation radius in m
   double std_radr_;
 
-  ///* Radar measurement noise standard deviation angle in rad
+  // Radar measurement noise standard deviation angle in rad
   double std_radphi_;
 
-  ///* Radar measurement noise standard deviation radius change in m/s
+  // Radar measurement noise standard deviation radius change in m/s
   double std_radrd_ ;
 
+  // Measurement noise covariance matrices
   MatrixXd R_radar_;
   MatrixXd R_lidar_;
-
-  ///* Weights of sigma points
-  VectorXd weights_;
 
   ///* State dimension
   int n_x_;
