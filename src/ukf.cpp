@@ -25,7 +25,7 @@ UKF::UKF() {
   std_a_ = 3;
 
   // Process noise standard deviation yaw acceleration in rad/s^2
-  std_yawdd_ = 2*M_PI*0.5;
+  std_yawdd_ = 2*M_PI*0.3;
 
   //TODO: when process noise sd are both 0.1 it's slow
 
@@ -385,6 +385,8 @@ void UKF::UpdateRadar(MeasurementPackage measurement_pack) {
   cout << "P_aug_: " << P_aug_ << endl;
 
   /**
-  TODO: Calculate the radar NIS.
+  TODO: Calculate the radar NIS to check consistency.
   */
+  NIS_radar_ = (z - z_pred).transpose() * S.inverse() * (z - z_pred);
+  cout << "NIS_radar_: " << NIS_radar_ << endl;
 }
