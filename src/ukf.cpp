@@ -22,10 +22,10 @@ UKF::UKF() {
   use_radar_ = true;
 
   // Process noise standard deviation longitudinal acceleration in m/s^2
-  std_a_ = 30;
+  std_a_ = 3;
 
   // Process noise standard deviation yaw acceleration in rad/s^2
-  std_yawdd_ = 30;
+  std_yawdd_ = 2*M_PI*0.5;
 
   //TODO: when process noise sd are both 0.1 it's slow
 
@@ -92,6 +92,11 @@ UKF::UKF() {
   // Radar measurement noise standard deviation radius change in m/s
   std_radrd_ = 0.3;
 
+  R_radar_ = MatrixXd(n_z_radar_,n_z_radar_);
+  R_radar_ << std_radr_*std_radr_, 0, 0,
+              0, std_radphi_*std_radphi_, 0,
+              0, 0,std_radrd_*std_radrd_;
+
   /**
   TODO:
   Complete the initialization. See ukf.h for other member properties.
@@ -136,7 +141,6 @@ void UKF::ProcessMeasurement(MeasurementPackage measurement_pack) {
 
 
 void UKF::InitializeFirstMeasurement(MeasurementPackage measurement_pack) {
-  cout << "initialization" << endl;
   previous_timestamp_ = measurement_pack.timestamp_;
   if(measurement_pack.sensor_type_ == MeasurementPackage::RADAR) {
     //convert radar to CTRV to set first state
@@ -245,18 +249,21 @@ void UKF::PredictMeanCovariance() {
   for (int i = 0; i < 2 * n_aug_ + 1; i++) {
     x = x+ weights_(i) * Xsig_pred_.col(i);
   }
-
   //covariance
   MatrixXd P = MatrixXd(n_x_, n_x_);
   P.fill(0.0);
   for (int i = 0; i < 2 * n_aug_ + 1; i++) {
-
     // state difference
     VectorXd x_diff = Xsig_pred_.col(i) - x;
     //angle normalization
+
+    //TO DO: angles get really big...normalization takes forever.
+
+    //cout << "predicted sigma point: " << Xsig_pred_.col(i) << endl;
+    //cout << "x_diff before normalization" << x_diff << endl;
     while (x_diff(3)> M_PI) x_diff(3)-=2.*M_PI;
     while (x_diff(3)<-M_PI) x_diff(3)+=2.*M_PI;
-
+    //cout << "x_diff after normalization" << x_diff << endl;
     P = P + weights_(i) * x_diff * x_diff.transpose();
   }
   x_ = x;
@@ -329,16 +336,11 @@ void UKF::UpdateRadar(MeasurementPackage measurement_pack) {
   }
 
   //add measurement noise covariance matrix
-  MatrixXd R = MatrixXd(n_z,n_z);
-  R <<    std_radr_*std_radr_, 0, 0,
-          0, std_radphi_*std_radphi_, 0,
-          0, 0,std_radrd_*std_radrd_;
-  S = S + R;
+  S = S + R_radar_;
 
   //MEASUREMENT UPDATE
 
   VectorXd z = measurement_pack.raw_measurements_;
-  cout << "z = " << z << endl;
 
   //create matrix for cross correlation Tc
   MatrixXd Tc = MatrixXd(n_x_, n_z);
@@ -379,7 +381,10 @@ void UKF::UpdateRadar(MeasurementPackage measurement_pack) {
   x_aug_.head(5) = x_;
   P_aug_.topLeftCorner(5,5) = P_;
 
+  cout << "x_aug_: " << x_aug_ << endl;
+  cout << "P_aug_: " << P_aug_ << endl;
+
   /**
-  Calculate the radar NIS.
+  TODO: Calculate the radar NIS.
   */
 }
