@@ -8,11 +8,13 @@ using Eigen::MatrixXd;
 using Eigen::VectorXd;
 using std::vector;
 
-//TODO: comments to note what inputs each function uses
+//TODO: meet criteria
 //TODO: handle zeros in the data
-//TODO: check constructor, see if everything from .h used
 //TODO: NIS should I just output? Add lidar NIS?
-//TODO: clean up .h
+//TODO: comments to note what inputs each function uses
+//TODO: check constructor, see if everything from .h used
+//TODO: clean up .h, and make some private
+
 
 UKF::UKF() {
 
@@ -21,11 +23,6 @@ UKF::UKF() {
 
   NIS_radar_count_ = 0;
   NIS_radar_sum_ = 0;
-
-  // if this is false, laser measurements will be ignored (except during init)
-  use_laser_ = true;
-  // if this is false, radar measurements will be ignored (except during init)
-  use_radar_ = true;
 
   // Process noise standard deviation longitudinal acceleration in m/s^2
   std_a_ = 1;
@@ -161,7 +158,6 @@ void UKF::InitializeFirstMeasurement(MeasurementPackage measurement_pack) {
   }
   x_aug_.head(5) = x_;
   is_initialized_ = true;
-  //TODO: not clear when I need to update x_ vs x_aug_
 }
 
 
@@ -231,39 +227,31 @@ void UKF::PredictSigmaPoints(double dt) {
 
 
 void UKF::PredictMeanCovariance() {
-  //mean
-  VectorXd x = VectorXd(n_x_);
-  x.fill(0.0);
+  x_.fill(0.0);
   for (int i = 0; i < 2 * n_aug_ + 1; i++) {
-    x = x+ weights_(i) * Xsig_pred_.col(i);
+    x_ = x_ + weights_(i) * Xsig_pred_.col(i);
   }
-  //covariance
-  MatrixXd P = MatrixXd(n_x_, n_x_);
-  P.fill(0.0);
+
+  P_.fill(0.0);
   for (int i = 0; i < 2 * n_aug_ + 1; i++) {
     // state difference
-    VectorXd x_diff = Xsig_pred_.col(i) - x;
+    VectorXd x_diff = Xsig_pred_.col(i) - x_;
     //angle normalization
-
-    //TO DO: angles get really big...normalization takes forever.
-
-    //cout << "predicted sigma point: " << Xsig_pred_.col(i) << endl;
-    //cout << "x_diff before normalization" << x_diff << endl;
     while (x_diff(3)> M_PI) x_diff(3)-=2.*M_PI;
     while (x_diff(3)<-M_PI) x_diff(3)+=2.*M_PI;
-    //cout << "x_diff after normalization" << x_diff << endl;
-    P = P + weights_(i) * x_diff * x_diff.transpose();
+
+    P_ = P_ + weights_(i) * x_diff * x_diff.transpose();
   }
-  x_ = x;
-  P_ = P;
-  /*Update x, p
-  TODO: do I need to update augmented x and P?
-  Probably, b/c in real life you might not get measurements each time
-  and need to predict further out, creating new sigma points?
-  I seem to get different answers if I do or don't comment these out...
-  */
+
   x_aug_.head(5) = x_;
   P_aug_.topLeftCorner(5,5) = P_;
+  
+  /* Pondering...do I need to update x_aug_ and P_aug_?
+  In this project it has no impact.
+  But in real life you might not get measurement for a while
+  And need to do multiple predict steps in a row
+  So you want the most up to date x_aug_ and P_aug_
+  */
 }
 
 
@@ -280,6 +268,7 @@ void UKF::UpdateLidar(MeasurementPackage measurement_pack) {
 
   UpdateCommon(n_z, R, Zsig, measurement_pack);
 }
+
 
 void UKF::UpdateRadar(MeasurementPackage measurement_pack) {
 
@@ -308,6 +297,7 @@ void UKF::UpdateRadar(MeasurementPackage measurement_pack) {
   //TODO: need to return z, z_pred, and S from UpdateCommon
   //NIS_radar_ = (z - z_pred).transpose() * S.inverse() * (z - z_pred);
 }
+
 
 void UKF::UpdateCommon(int n_z, MatrixXd R, MatrixXd Zsig, MeasurementPackage measurement_pack) {
   //mean predicted measurement
@@ -369,11 +359,9 @@ void UKF::UpdateCommon(int n_z, MatrixXd R, MatrixXd Zsig, MeasurementPackage me
   while (z_diff(1)> M_PI) z_diff(1)-=2.*M_PI;
   while (z_diff(1)<-M_PI) z_diff(1)+=2.*M_PI;
 
-  //update state mean and covariance matrix
+  //update state and augmented state
   x_ = x_ + K * z_diff;
   P_ = P_ - K*S*K.transpose();
-
-  //TODO: is this necessary?
   x_aug_.head(5) = x_;
   P_aug_.topLeftCorner(5,5) = P_;
 }
