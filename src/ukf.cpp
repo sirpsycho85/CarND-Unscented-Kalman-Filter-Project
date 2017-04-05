@@ -8,32 +8,27 @@ using Eigen::MatrixXd;
 using Eigen::VectorXd;
 using std::vector;
 
-//TODO: NIS should I just output? Add lidar NIS?
-
-//TODO: comments to note what inputs each function uses
-//TODO: check constructor, see if everything from .h used
-//TODO: clean up .h, and make some private
-//TODO: figure out if/why the process noises make physical sense
+/* TODO later:
+clean up .h, public/private
+figure out if/why the process noises that converged make physical sense
+figure out why it's sensitive to initial x and P
+*/
 
 UKF::UKF() {
 
-  is_initialized_ = false;
-  previous_timestamp_ = 0;
-
   // Process noise standard deviation longitudinal acceleration in m/s^2
-  std_a_ = 0.1; //1.0 0.1 0.1
+  std_a_ = 0.1;
 
   // Process noise standard deviation yaw acceleration in rad/s^2
-  std_yawdd_ = 0.5; //0.05 0.05 0.1
+  std_yawdd_ = 0.5;
+
+  is_initialized_ = false;
+  previous_timestamp_ = 0;
 
   n_x_ = 5;
   n_aug_ = 7;
   lambda_ = 3 - n_aug_;
 
-  n_z_radar_ = 3;
-  n_z_lidar_ = 2;
-
-  //weights
   weights_ = VectorXd(2*n_aug_+1);
   weights_(0) = lambda_/(lambda_+n_aug_);
   for (int i=1; i<2*n_aug_+1; i++) {
@@ -41,13 +36,10 @@ UKF::UKF() {
     weights_(i) = weight;
   }
 
-  // TODO - do I need to initialize this here at all?
-
-  // initial state vector
+  // initialize x, P
   x_ = VectorXd(n_x_);
   x_ << 1,1,1,1,1;
 
-  // initial covariance matrix
   P_ = MatrixXd(n_x_, n_x_);
   P_ <<   1, 0, 0, 0, 0,
           0, 1, 0, 0, 0,
@@ -55,7 +47,7 @@ UKF::UKF() {
           0, 0, 0, 1, 0,
           0, 0, 0 ,0, 1;
 
-  //create augmented mean and covariance
+  // augmented x, P
   x_aug_ = VectorXd(7);
   P_aug_ = MatrixXd(7, 7);
 
@@ -72,7 +64,8 @@ UKF::UKF() {
   Xsig_aug_ = MatrixXd(n_aug_, 2 * n_aug_ + 1);
   Xsig_pred_ = MatrixXd(n_x_, 2 * n_aug_ + 1);
 
-
+  n_z_radar_ = 3;
+  n_z_lidar_ = 2;
 
   // Laser measurement noise standard deviation position1 in m
   std_laspx_ = 0.15;
@@ -159,7 +152,6 @@ void UKF::InitializeFirstMeasurement(MeasurementPackage measurement_pack) {
 
 void UKF::Prediction(double dt) {
   GenerateSigmaPoints();
-  //cout << "x_ = " << endl << x_ << endl;
   PredictSigmaPoints(dt);
   PredictMeanCovariance();
 }
@@ -243,7 +235,7 @@ void UKF::PredictMeanCovariance() {
   x_aug_.head(5) = x_;
   P_aug_.topLeftCorner(5,5) = P_;
   
-  /* Pondering...do I need to update x_aug_ and P_aug_?
+  /* TODO: Pondering...do I need to update x_aug_ and P_aug_?
   In this project it has no impact.
   But in real life you might not get measurement for a while
   And need to do multiple predict steps in a row
@@ -264,7 +256,6 @@ void UKF::UpdateLidar(MeasurementPackage measurement_pack) {
   }
 
   UpdateCommon(n_z, R, Zsig, measurement_pack);
-  cout << "x_ = " << endl << x_ << endl;
 }
 
 
@@ -296,11 +287,8 @@ void UKF::UpdateRadar(MeasurementPackage measurement_pack) {
     }
     
   }
-  cout << "Xsig_pred_ = " << endl << Xsig_pred_ << endl;
-  cout << "Zsig = " << endl << Zsig << endl;
+
   UpdateCommon(n_z, R, Zsig, measurement_pack);
-  //TODO: need to return z, z_pred, and S from UpdateCommon
-  //NIS_radar_ = (z - z_pred).transpose() * S.inverse() * (z - z_pred);
 }
 
 
