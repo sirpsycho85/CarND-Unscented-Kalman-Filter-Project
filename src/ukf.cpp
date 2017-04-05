@@ -8,27 +8,23 @@ using Eigen::MatrixXd;
 using Eigen::VectorXd;
 using std::vector;
 
-//TODO: meet criteria
-//TODO: handle zeros in the data
 //TODO: NIS should I just output? Add lidar NIS?
+
 //TODO: comments to note what inputs each function uses
 //TODO: check constructor, see if everything from .h used
 //TODO: clean up .h, and make some private
-
+//TODO: figure out if/why the process noises make physical sense
 
 UKF::UKF() {
 
   is_initialized_ = false;
   previous_timestamp_ = 0;
 
-  NIS_radar_count_ = 0;
-  NIS_radar_sum_ = 0;
-
   // Process noise standard deviation longitudinal acceleration in m/s^2
-  std_a_ = 1;
+  std_a_ = 0.1; //1.0 0.1 0.1
 
   // Process noise standard deviation yaw acceleration in rad/s^2
-  std_yawdd_ = 0.05;
+  std_yawdd_ = 0.5; //0.05 0.05 0.1
 
   n_x_ = 5;
   n_aug_ = 7;
@@ -163,6 +159,7 @@ void UKF::InitializeFirstMeasurement(MeasurementPackage measurement_pack) {
 
 void UKF::Prediction(double dt) {
   GenerateSigmaPoints();
+  //cout << "x_ = " << endl << x_ << endl;
   PredictSigmaPoints(dt);
   PredictMeanCovariance();
 }
@@ -267,6 +264,7 @@ void UKF::UpdateLidar(MeasurementPackage measurement_pack) {
   }
 
   UpdateCommon(n_z, R, Zsig, measurement_pack);
+  cout << "x_ = " << endl << x_ << endl;
 }
 
 
@@ -288,11 +286,18 @@ void UKF::UpdateRadar(MeasurementPackage measurement_pack) {
     double v2 = sin(yaw)*v;
 
     // measurement model
-    Zsig(0,i) = sqrt(p_x*p_x + p_y*p_y);                        //r
-    Zsig(1,i) = atan2(p_y,p_x);                                 //phi
-    Zsig(2,i) = (p_x*v1 + p_y*v2 ) / sqrt(p_x*p_x + p_y*p_y);   //r_dot
+    Zsig(0,i) = sqrt(p_x*p_x + p_y*p_y);              //r
+    Zsig(1,i) = atan2(p_y,p_x);                       //phi
+    if(sqrt(p_x*p_x + p_y*p_y) < 0.0001) {            //r_dot check for div by 0
+      Zsig(2,i) = (p_x*v1 + p_y*v2) / 0.0001;
+    }
+    else {
+      Zsig(2,i) = (p_x*v1 + p_y*v2) / sqrt(p_x*p_x + p_y*p_y);
+    }
+    
   }
-
+  cout << "Xsig_pred_ = " << endl << Xsig_pred_ << endl;
+  cout << "Zsig = " << endl << Zsig << endl;
   UpdateCommon(n_z, R, Zsig, measurement_pack);
   //TODO: need to return z, z_pred, and S from UpdateCommon
   //NIS_radar_ = (z - z_pred).transpose() * S.inverse() * (z - z_pred);
