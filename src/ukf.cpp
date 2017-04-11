@@ -38,7 +38,7 @@ UKF::UKF() {
 
   // initialize x, P
   x_ = VectorXd(n_x_);
-  x_ << 1,1,1,1,1;
+  //x_ << 1,1,1,1,1;
 
   P_ = MatrixXd(n_x_, n_x_);
   P_ <<   1, 0, 0, 0, 0,
